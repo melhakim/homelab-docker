@@ -20,6 +20,16 @@ x-mediarr-container: &mediarr-container
     - /mnt/Media/downloads:/mnt/downloads
 
 services:
+  syncthing:
+    networks:
+      - mediarr
+    container_name: syncthing
+    image: syncthing/syncthing:latest
+    hostname: syncthing
+    volumes:
+      - jellyfin-etc:/srv/jellyfin/etc
+      - jellyfin-lib:/srv/jellyfin/lib
+      - /mnt/srvconf/syncthing:/var/syncthing/config
   jellyfin:
     <<: *default-container
     container_name: jellyfin
@@ -31,9 +41,9 @@ services:
       #- JELLYFIN_CACHE_DIR=/var/cache/jellyfin
       #- JELLYFIN_LOG_DIR=/var/log/jellyfin
     volumes:
-      - /mnt/srvconf/jellyfin/etc:/etc/jellyfin
-      - /mnt/srvconf/jellyfin/lib:/var/lib/jellyfin
-      - /mnt/srvconf/jellyfin/cache:/var/cache/jellyfin
+      - jellyfin-etc:/etc/jellyfin
+      - jellyfin-lib:/var/lib/jellyfin
+      - jellyfin-cache:/var/cache/jellyfin
       - /var/log/jellyfin/:/var/log/jellyfin
       - /etc/timezone:/etc/timezone
       - /mnt/Media:/mnt/media
@@ -179,6 +189,10 @@ networks:
     driver: bridge
 volumes:
   jellyfin-cache:
+    driver: local
+  jellyfin-lib:
+    driver: local
+  jellyfin-etc:
     driver: local
   #myMedia:
     #driver: local
