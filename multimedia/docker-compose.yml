@@ -20,6 +20,21 @@ x-mediarr-container: &mediarr-container
     - /mnt/Media/downloads:/mnt/downloads
 
 services:
+  wireguard:
+    #<<: *default-container
+    image: linuxserver/wireguard
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    volumes:
+      - /mnt/srvconf/wireguard:/config
+      - /lib/modules:/lib/modules # For kernel modules
+    ports:
+      - "51820:51820/udp"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
   syncthing:
     networks:
       - mediarr
