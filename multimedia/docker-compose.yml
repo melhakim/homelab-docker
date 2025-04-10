@@ -32,9 +32,14 @@ services:
       - /lib/modules:/lib/modules # For kernel modules
     ports:
       - "51820:51820/udp"
+      - 8080:8080 # Following ports moved from qbittorrent
+      - 6881:6881
+      - 6881:6881/udp
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
     restart: unless-stopped
+    depends_on:
+      - qbittorrent
     networks:
       - mediarr
   syncthing:
@@ -146,21 +151,20 @@ services:
       - LOG_HTML=${LOG_HTML:-false}
       - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
     restart: unless-stopped
-    network_mode: service:wireguard
   qbittorrent:
-    <<: *mediarr-container
+    #<<: *mediarr-container
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
-    hostname: qbittorrent
+    #hostname: qbittorrent
     environment:
       - WEBUI_PORT=8080
     volumes:
       - /mnt/srvconf/qbittorrent:/config
       - /mnt/Media/downloads:/downloads
-    ports:
-      - 8080:8080
-      - 6881:6881
-      - 6881:6881/udp
+    #ports: # Moved to wireguard stack via network_mode
+      #- 8080:8080
+      #- 6881:6881
+      #- 6881:6881/udp
     network_mode: service:wireguard
   radarr:
     <<: *mediarr-container
@@ -175,7 +179,6 @@ services:
       - prowlarr
       - qbittorrent
       - jellyfin
-    network_mode: service:wireguard
   #readarr:
     #<<: *mediarr-container
     #image: lscr.io/linuxserver/readarr:develop
