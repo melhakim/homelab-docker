@@ -13,38 +13,30 @@ x-default-container: &default-container
 # containers on the mediarr nework, also have access to specific volumes
 x-mediarr-container: &mediarr-container
   <<: *default-container
-  networks:
-    - mediarr
   volumes:
     - /mnt/Media:/mnt/media
     - /mnt/Media/downloads:/mnt/downloads
 
 services:
   wireguard:
-    #<<: *default-container
     image: linuxserver/wireguard
     container_name: wireguard
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
     volumes:
-      - /mnt/srvconf/wireguard:/config
+      - /mnt/srvconf/wireguard:/config/
       - /lib/modules:/lib/modules # For kernel modules
     ports:
-      - "51820:51820/udp"
-      - 8080:8080 # Following ports moved from qbittorrent
+      - 51820:51820/udp
+        # Following ports moved from qbittorrent
+      - 8080:8080 
       - 6881:6881
       - 6881:6881/udp
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
     restart: unless-stopped
-    depends_on:
-      - qbittorrent
-    networks:
-      - mediarr
   syncthing:
-    networks:
-      - mediarr
     container_name: syncthing
     image: syncthing/syncthing:latest
     hostname: syncthing
@@ -52,6 +44,8 @@ services:
       - jellyfin-etc:/srv/jellyfin/etc
       - jellyfin-lib:/srv/jellyfin/lib
       - /mnt/srvconf/syncthing:/var/syncthing/config
+    ports:
+      - 8384:8384
   jellyfin:
     <<: *default-container
     container_name: jellyfin
@@ -136,7 +130,7 @@ services:
     container_name: prowlarr
     hostname: prowlarr
     volumes:
-      - /mnt/srvconf/prowlarr:/config
+      - prowlarr:/config
     ports:
       - 9696:9696
     depends_on:
@@ -152,19 +146,14 @@ services:
       - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
     restart: unless-stopped
   qbittorrent:
-    #<<: *mediarr-container
+    <<: *default-container
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
-    #hostname: qbittorrent
     environment:
       - WEBUI_PORT=8080
     volumes:
       - /mnt/srvconf/qbittorrent:/config
       - /mnt/Media/downloads:/downloads
-    #ports: # Moved to wireguard stack via network_mode
-      #- 8080:8080
-      #- 6881:6881
-      #- 6881:6881/udp
     network_mode: service:wireguard
   radarr:
     <<: *mediarr-container
@@ -172,7 +161,7 @@ services:
     container_name: radarr
     hostname: radarr
     volumes:
-      - /mnt/srvconf/radarr:/config
+      - radarr:/config
     ports:
       - 7878:7878
     depends_on:
