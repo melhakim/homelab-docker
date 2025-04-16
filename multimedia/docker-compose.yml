@@ -162,6 +162,7 @@ services:
     hostname: radarr
     volumes:
       - radarr:/config
+      - /mnt/Media:/mnt/media
     ports:
       - 7878:7878
     depends_on:
@@ -186,27 +187,22 @@ services:
     container_name: sonarr
     hostname: sonarr
     volumes:
-      - /mnt/srvconf/sonarr:/config
+      - sonarr:/config
+      - /mnt/Media:/mnt/media
     depends_on:
       - prowlarr
       #- qbittorrent
       - jellyfin
     ports:
       - 8989:8989
-networks:
-  #firefox:
-    #driver: bridge
-  #duplicati:
-    #driver: bridge
-  mediarr:
-    driver: bridge
 volumes:
   jellyfin-cache:
-    driver: local
   jellyfin-lib:
-    driver: local
   jellyfin-etc:
-    driver: local
+  radarr:
+  sonarr:
+  prowlarr:
+
   #myMedia:
     #driver: local
     #driver_opts:
