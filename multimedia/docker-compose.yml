@@ -33,6 +33,12 @@ services:
       - 8080:8080 
       - 6881:6881
       - 6881:6881/udp
+        # Prowlarr
+      - 9696:9696
+        # Radarr
+      - 7878:7878
+        # Sonarr
+      - 8989:8989
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
     restart: unless-stopped
@@ -128,13 +134,12 @@ services:
     <<: *mediarr-container
     image: linuxserver/prowlarr:latest
     container_name: prowlarr
-    hostname: prowlarr
     volumes:
       - prowlarr:/config
-    ports:
-      - 9696:9696
     depends_on:
       - flaresolverr
+      - wireguard
+    network_mode: service:wireguard
   flaresolverr:
     <<: *mediarr-container
     image: ghcr.io/flaresolverr/flaresolverr:latest
@@ -159,16 +164,14 @@ services:
     <<: *mediarr-container
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
-    hostname: radarr
     volumes:
       - radarr:/config
       - /mnt/Media:/mnt/media
-    ports:
-      - 7878:7878
     depends_on:
       - prowlarr
       - qbittorrent
       - jellyfin
+    network_mode: service:wireguard
   #readarr:
     #<<: *mediarr-container
     #image: lscr.io/linuxserver/readarr:develop
@@ -185,16 +188,14 @@ services:
     <<: *mediarr-container
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
-    hostname: sonarr
     volumes:
       - sonarr:/config
       - /mnt/Media:/mnt/media
     depends_on:
       - prowlarr
-      #- qbittorrent
       - jellyfin
-    ports:
-      - 8989:8989
+    network_mode: service:wireguard
+
 volumes:
   jellyfin-cache:
   jellyfin-lib:
