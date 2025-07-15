@@ -1,0 +1,24 @@
+name: Deploy docker compose file
+on: [push]
+
+jobs:
+  see-all-output:
+    runs-on: hakim
+    #runs-on: ubuntu-latest
+    container:
+      image: homelab:9000/hakim/docker/act-runner:latest
+      volumes:
+        - /mnt/homelab/ssh:/root/.ssh
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+      - name: Check for changes
+        run: |
+          set -x
+          git fetch origin main
+          echo "GIT_CHANGES=$(git diff --name-only origin/main)" >> $GITHUB_ENV
+      - run: |
+          echo "$GIT_CHANGES"
+          echo $GITHUB_ENV
+          cat $GITHUB_ENV
+
