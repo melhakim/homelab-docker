@@ -1,24 +1,39 @@
 name: Deploy docker compose file
 on: [push]
 
+env:
+  COMPOSE_FILES: |
+    multimedia/docker-compose.yml   debian@multimedia
+    homelab/docker-compose.yml      mohammed@homelab
+  SSH_OPTS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 jobs:
-  see-all-output:
+  checkout:
     runs-on: hakim
-    #runs-on: ubuntu-latest
     container:
-      image: homelab:9000/hakim/docker/act-runner:latest
       volumes:
         - /mnt/homelab/ssh:/root/.ssh
+    #strategy:
+      #matrix:
+        #include:
+          #- file: multimedia/docker-compose.yml
+            #user: debian@multimedia
+          #- file: homelab/docker-compose.yml
+            #user: mohammed@homelab
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
       - name: Check for changes
         run: |
-          set -x
+          #set -x
           git fetch origin main
-          echo "GIT_CHANGES=$(git diff --name-only origin/main)" >> $GITHUB_ENV
-      - run: |
-          echo "$GIT_CHANGES"
-          echo $GITHUB_ENV
-          cat $GITHUB_ENV
-
+          while read -r file user; do
+            echo "Checking changes for $file on $user"
+            git diff --name-only origin/main -- "$file"
+            if [ -n "$(git diff --name-only origin/main -- $file)" ]; then
+              scp $SSH_OPTS "$file" "$user:~/docker-compose.yml"
+              ssh $SSH_OPTS "$user" "docker compose -f ~/docker-compose.yml pull && docker compose -f ~/docker-compose.yml up -d"
+            fi
+          done < <(echo "$COMPOSE_FILES" | grep -v '^$')
+      #- name: Copy docker-compose file to server
+        #run: echo will upload ${{ matrix.file }} to ${{ matrix.user }}
+        #if: ${{  }}
