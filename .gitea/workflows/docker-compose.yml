@@ -1,0 +1,30 @@
+name: Deploy docker compose file
+on:
+  push:
+    branches: [main,stage]
+
+env:
+  COMPOSE_FILES: |
+    multimedia/docker-compose.yml   debian@multimedia
+    homelab/docker-compose.yml      mohammed@homelab
+  SSH_OPTS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+jobs:
+  checkout:
+    runs-on: hakim
+    container:
+      volumes:
+        - /mnt/homelab/ssh:/root/.ssh
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+      - name: Check for changes
+        run: |
+          git fetch origin main
+          while read -r file user; do
+            echo "Checking changes for $file on $user"
+            git diff --name-only origin/main -- "$file"
+            if [ -n "$(git diff --name-only origin/main -- $file)" ]; then
+              scp $SSH_OPTS "$file" "$user:~/docker-compose.yml"
+              ssh $SSH_OPTS "$user" "docker compose -f ~/docker-compose.yml up -d"
+            fi
+          done < <(echo "$COMPOSE_FILES" | grep -v '^$')
