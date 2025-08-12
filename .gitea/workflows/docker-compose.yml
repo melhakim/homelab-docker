@@ -1,5 +1,7 @@
 name: Deploy docker compose file
-on: [push]
+on:
+  push:
+    branches: [main,stage]
 
 env:
   COMPOSE_FILES: |
@@ -12,28 +14,17 @@ jobs:
     container:
       volumes:
         - /mnt/homelab/ssh:/root/.ssh
-    #strategy:
-      #matrix:
-        #include:
-          #- file: multimedia/docker-compose.yml
-            #user: debian@multimedia
-          #- file: homelab/docker-compose.yml
-            #user: mohammed@homelab
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
       - name: Check for changes
         run: |
-          #set -x
           git fetch origin main
           while read -r file user; do
             echo "Checking changes for $file on $user"
             git diff --name-only origin/main -- "$file"
             if [ -n "$(git diff --name-only origin/main -- $file)" ]; then
               scp $SSH_OPTS "$file" "$user:~/docker-compose.yml"
-              ssh $SSH_OPTS "$user" "docker compose -f ~/docker-compose.yml pull && docker compose -f ~/docker-compose.yml up -d"
+              ssh $SSH_OPTS "$user" "docker compose -f ~/docker-compose.yml up -d"
             fi
           done < <(echo "$COMPOSE_FILES" | grep -v '^$')
-      #- name: Copy docker-compose file to server
-        #run: echo will upload ${{ matrix.file }} to ${{ matrix.user }}
-        #if: ${{  }}
