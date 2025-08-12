@@ -1,4 +1,5 @@
 ---
+name: multimedia
 # Setup default propreties we want on all/most containers
 x-default-container: &default-container
   user: 1000:1000
