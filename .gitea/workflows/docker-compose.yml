@@ -1,30 +1,39 @@
-name: Deploy docker compose file
+name: Check for changes in docker compose file
 on:
   push:
     branches: [main,stage]
 
-env:
-  COMPOSE_FILES: |
-    multimedia/docker-compose.yml   debian@multimedia
-    homelab/docker-compose.yml      mohammed@homelab
-  SSH_OPTS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 jobs:
-  checkout:
+  deploy:
     runs-on: hakim
+    strategy:
+      matrix:
+        include:
+          - file: multimedia/docker-compose.yml
+            user: debian@multimedia
+          #- file: homelab/docker-compose.yml
+            #user: mohammed@homelab
     container:
       volumes:
         - /mnt/homelab/ssh:/root/.ssh
+    env:
+      SSH_OPTS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
-      - name: Check for changes
+      - name: Fetch main branch
+        run: git fetch origin main
+      - name: Check if file has changed
+        id: changes
         run: |
-          git fetch origin main
-          while read -r file user; do
-            echo "Checking changes for $file on $user"
-            git diff --name-only origin/main -- "$file"
-            if [ -n "$(git diff --name-only origin/main -- $file)" ]; then
-              scp $SSH_OPTS "$file" "$user:~/docker-compose.yml"
-              ssh $SSH_OPTS "$user" "docker compose -f ~/docker-compose.yml up -d"
-            fi
-          done < <(echo "$COMPOSE_FILES" | grep -v '^$')
+          if [ -n "$(git diff --name-only origin/main -- ${{ matrix.file }})" ]; then
+            echo ${{ matrix.file }} has changed
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Deploy if changed
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          scp $SSH_OPTS ${{ matrix.file }} ${{ matrix.user }}:~/docker-compose.yml
+          ssh $SSH_OPTS ${{ matrix.user }} 'docker compose -f ~/docker-compose.yml pull && docker compose -f ~/docker-compose.yml up -d'
