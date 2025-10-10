@@ -1,0 +1,64 @@
+services:
+  semaphore:
+    image: semaphoreui/semaphore:latest
+    ports:
+      - "3000:3000"
+    environment:
+      SEMAPHORE_DB_DIALECT: bolt
+      SEMAPHORE_ADMIN_PASSWORD: changeme
+      SEMAPHORE_ADMIN_NAME: admin
+      SEMAPHORE_ADMIN_EMAIL: admin@localhost
+      SEMAPHORE_ADMIN: admin
+    volumes:
+      - /mnt/homelab/ssh:/home/semaphore/.ssh
+      - /mnt/homelab/semaphore/data:/home/semaphore/data
+      - /mnt/homelab/semaphore/etc:/etc/semaphore
+      - /mnt/homelab/semaphore/var:/var/lib/semaphore
+      - /mnt/homelab/semaphore/gpg:/home/semaphore/.gnupg
+
+  gitea:
+    image: gitea/gitea:latest
+    ports:
+      - "9000:3000"
+      - "2222:22"
+    volumes:
+      - /mnt/homelab/gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: "*"
+    ports:
+      - "80:3000"
+    volumes:
+      - /mnt/homelab/homepage/config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.multimedia.sock:/var/run/docker.multimedia.sock
+
+  olivetin:
+    image: jamesread/olivetin:latest
+    user: root
+    ports:
+      - "1337:1337"
+    volumes:
+      - /mnt/homelab/ssh:/root/.ssh
+      - /mnt/homelab/olivetin/config:/config
+      - /mnt/homelab/olivetin/data:/data
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.multimedia.sock:/var/run/docker.multimedia.sock
+
+  gitea-act-runner:
+    image: docker.io/gitea/act_runner:latest
+    environment:
+      GITEA_INSTANCE_URL: http://homelab.fritz.box:9000
+      CONFIG_FILE: /etc/config.yaml
+      GITEA_RUNNER_REGISTRATION_TOKEN: "{{ lookup('community.general.passwordstore','gitea-act-runner-token') }}"
+      GITEA_RUNNER_NAME: run_forest_run
+    volumes:
+      - /mnt/homelab/gitea-act-runner/config.yaml:/etc/config.yaml
+      - /mnt/homelab/gitea-act-runner/docker-config.json:/root/.docker/config.json
+      - /mnt/homelab/ssh:/root/.ssh
+      - /var/run/docker.sock:/var/run/docker.sock
