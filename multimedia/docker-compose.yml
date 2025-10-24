@@ -140,7 +140,7 @@ services:
       - prowlarr:/config
     depends_on:
       - flaresolverr
-      - wireguard
+      #- wireguard # disabled since network_mode is used
     network_mode: service:wireguard
   flaresolverr:
     <<: *mediarr-container
@@ -152,6 +152,7 @@ services:
       - LOG_HTML=${LOG_HTML:-false}
       - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
     restart: unless-stopped
+    network_mode: service:wireguard
   qbittorrent:
     <<: *default-container
     image: lscr.io/linuxserver/qbittorrent:latest
