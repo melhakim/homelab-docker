@@ -10,23 +10,30 @@ jobs:
       matrix:
         include:
           - file: multimedia/docker-compose.yml
-            user: debian@multimedia
+            server: multimedia
+            user: debian
           #- file: homelab/docker-compose.yml
-            #user: mohammed@homelab
+          #  server: homelab
+          #  user: mohammed
     container:
       volumes:
         - /mnt/homelab/ssh:/root/.ssh
     env:
       SSH_OPTS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+      SSH_CONNECT: ${{ matrix.user }}@${{ matrix.server }}
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
       - name: Fetch main branch
         run: git fetch origin main
+      - name: Set latest tag
+        run: |
+          git fetch --tags
+          echo LATEST_TAG=$(git describe --tags | grep ${{ matrix.server }} | sort -V | tail -n1) >> $GITHUB_ENV
       - name: Check if file has changed
         id: changes
         run: |
-          if [ -n "$(git diff --name-only origin/main -- ${{ matrix.file }})" ]; then
+          if [ -n "$(git diff --name-only  -- $LATEST_TAG ${{ matrix.file }})" ]; then
             echo ${{ matrix.file }} has changed
             echo "changed=true" >> $GITHUB_OUTPUT
           else
@@ -35,5 +42,7 @@ jobs:
       - name: Deploy if changed
         if: steps.changes.outputs.changed == 'true'
         run: |
-          scp $SSH_OPTS ${{ matrix.file }} ${{ matrix.user }}:~/docker-compose.yml
-          ssh $SSH_OPTS ${{ matrix.user }} 'docker compose -f ~/docker-compose.yml pull && docker compose -f ~/docker-compose.yml up -d'
+          scp $SSH_OPTS ${{ matrix.file }} $SSH_CONNECT:~/docker-compose.yml
+          ssh $SSH_OPTS $SSH_CONNECT 'docker compose -f ~/docker-compose.yml pull && docker compose -f ~/docker-compose.yml up -d'
+      - name: Git tag
+        run: git tag ${{ matrix.server }}_v$(date +'%Y.%m.%d-%H%M%S') && git push origin --tags
