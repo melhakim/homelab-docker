@@ -24,25 +24,17 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
+        with:
+          filter: blob:none
       - name: Fetch main branch
         run: git fetch origin main
-      - name: Set latest tag
-        run: |
-          git fetch --tags
-          echo LATEST_TAG=$(git describe --tags | grep ${{ matrix.server }} | sort -V | tail -n1) >> $GITHUB_ENV
       - name: Check if file has changed
         id: changes
         run: |
-          if [ -n "$(git diff --name-only  -- $LATEST_TAG ${{ matrix.file }})" ]; then
+          LATEST_TAG=$(git describe --tags --match ${{ matrix.server }}_v)
+          if [ -n "$(git diff --name-only $LATEST_TAG -- ${{ matrix.file }})" ]; then
             echo ${{ matrix.file }} has changed
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
+            scp $SSH_OPTS ${{ matrix.file }} $SSH_CONNECT:~/docker-compose.yml
+            ssh $SSH_OPTS $SSH_CONNECT 'docker compose -f ~/docker-compose.yml pull && docker compose -f ~/docker-compose.yml up -d'
+            git tag ${{ matrix.server }}_v$(date +'%Y.%m.%d-%H%M%S') && git push origin --tags
           fi
-      - name: Deploy if changed
-        if: steps.changes.outputs.changed == 'true'
-        run: |
-          scp $SSH_OPTS ${{ matrix.file }} $SSH_CONNECT:~/docker-compose.yml
-          ssh $SSH_OPTS $SSH_CONNECT 'docker compose -f ~/docker-compose.yml pull && docker compose -f ~/docker-compose.yml up -d'
-      - name: Git tag
-        run: git tag ${{ matrix.server }}_v$(date +'%Y.%m.%d-%H%M%S') && git push origin --tags
