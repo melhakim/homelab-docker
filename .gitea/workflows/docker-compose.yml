@@ -24,14 +24,12 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
-        with:
-          filter: blob:none
       - name: Fetch main branch
         run: git fetch origin main
-      - name: Check if file has changed
-        id: changes
+      - name: Deploy if compose file changed
         run: |
-          LATEST_TAG=$(git describe --tags --match ${{ matrix.server }}_v)
+          git fetch --depth=1 origin --tags
+          LATEST_TAG=$(git tag -l "${{ matrix.server }}_v*" --sort=-v:refname | head -1)
           if [ -n "$(git diff --name-only $LATEST_TAG -- ${{ matrix.file }})" ]; then
             echo ${{ matrix.file }} has changed
             scp $SSH_OPTS ${{ matrix.file }} $SSH_CONNECT:~/docker-compose.yml
