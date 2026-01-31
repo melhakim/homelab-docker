@@ -12,9 +12,9 @@ jobs:
           - file: multimedia/docker-compose.yml
             server: multimedia
             user: debian
-          #- file: homelab/docker-compose.yml
-          #  server: homelab
-          #  user: mohammed
+          - file: homelab/docker-compose.yml
+            server: homelab
+            user: mohammed
     container:
       volumes:
         - /mnt/homelab/ssh:/root/.ssh

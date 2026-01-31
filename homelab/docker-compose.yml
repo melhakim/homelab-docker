@@ -1,5 +1,7 @@
+name: homelab
 services:
   semaphore:
+    container_name: semaphore
     image: semaphoreui/semaphore:latest
     ports:
       - "3000:3000"
@@ -17,6 +19,7 @@ services:
       - /mnt/homelab/semaphore/gpg:/home/semaphore/.gnupg
 
   gitea:
+    container_name: gitea
     image: gitea/gitea:latest
     ports:
       - "9000:3000"
@@ -27,6 +30,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
 
   homepage:
+    container_name: homepage
     image: ghcr.io/gethomepage/homepage:latest
     environment:
       HOMEPAGE_ALLOWED_HOSTS: "*"
@@ -38,6 +42,7 @@ services:
       - /var/run/docker.multimedia.sock:/var/run/docker.multimedia.sock
 
   olivetin:
+    container_name: olivetin
     image: jamesread/olivetin:latest
     user: root
     ports:
@@ -52,14 +57,38 @@ services:
       - /var/run/docker.multimedia.sock:/var/run/docker.multimedia.sock
 
   gitea-act-runner:
+    container_name: gitea-act-runner
     image: docker.io/gitea/act_runner:latest
     environment:
       GITEA_INSTANCE_URL: http://homelab.fritz.box:9000
       CONFIG_FILE: /etc/config.yaml
-      GITEA_RUNNER_REGISTRATION_TOKEN: "{{ lookup('community.general.passwordstore','gitea-act-runner-token') }}"
+      GITEA_RUNNER_REGISTRATION_TOKEN: $GITEA_RUNNER_REGISTRATION_TOKEN
       GITEA_RUNNER_NAME: run_forest_run
     volumes:
       - /mnt/homelab/gitea-act-runner/config.yaml:/etc/config.yaml
       - /mnt/homelab/gitea-act-runner/docker-config.json:/root/.docker/config.json
       - /mnt/homelab/ssh:/root/.ssh
       - /var/run/docker.sock:/var/run/docker.sock
+
+  beszel:
+    image: henrygd/beszel
+    container_name: beszel
+    restart: unless-stopped
+    ports:
+      - 8090:8090
+    volumes:
+      - /mnt/homelab/beszel:/beszel_data
+
+  beszel-agent:
+    image: henrygd/beszel-agent:latest
+    container_name: beszel-agent
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /mnt/homelab/beszel_agent/:/var/lib/beszel-agent
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      LISTEN: 45876
+      HUB_URL: http://beszel:8090
+      TOKEN: ${BESZEL_AGENT_TOKEN}
+      KEY: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFf7WEIuo2Svnw9AvdLHA/MWXIvtQTbwP40cyTwOGQCe"
