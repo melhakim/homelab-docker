@@ -47,6 +47,8 @@ services:
     user: root
     ports:
       - "1337:1337"
+    environment:
+      - DOCKER_API_VERSION=1.41
     env_file: /mnt/homelab/olivetin/environment
     volumes:
       - /mnt/homelab/ssh:/root/.ssh
@@ -70,6 +72,29 @@ services:
       - /mnt/homelab/ssh:/root/.ssh
       - /var/run/docker.sock:/var/run/docker.sock
 
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    restart: always
+    ports:
+      - "3001:3001"  # This maps the container port "3001" to the host port "3001"
+    volumes:
+      - /mnt/homelab/uptimekuma:/app/data  # Configuring persistent storage
+    environment:
+      - TZ=UTC  # Set the timezone (change to your preferred local timezone so monitoring times are the same)
+      - UMASK=0022  # Set your file permissions manually
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   beszel:
     image: henrygd/beszel
     container_name: beszel
@@ -86,9 +111,11 @@ services:
     network_mode: host
     volumes:
       - /mnt/homelab/beszel_agent/:/var/lib/beszel-agent
+      #- ./beszel_socket:/beszel_socket
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       LISTEN: 45876
+      #HUB_URL: http://localhost:8090
       HUB_URL: http://beszel:8090
       TOKEN: ${BESZEL_AGENT_TOKEN}
       KEY: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFf7WEIuo2Svnw9AvdLHA/MWXIvtQTbwP40cyTwOGQCe"
